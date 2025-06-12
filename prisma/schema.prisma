@@ -1,0 +1,56 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model TipoDTE {
+  id          Int      @id
+  descripcion String
+  dtes        DTE[]
+  cafs        CAF[]
+}
+
+model DTE {
+  id                  Int       @id @default(autoincrement())
+  rutEmisor           String
+  folio               Int
+  tipoId              Int
+  tipo                TipoDTE   @relation(fields: [tipoId], references: [id])
+  razonSocialEmisor   String
+  rutReceptor         String
+  razonSocialReceptor String
+  montoNeto           Decimal
+  iva                 Decimal
+  total               Decimal
+  items               DTEItem[]
+  estado             String   @default("EN_REVISION")
+  glosa              String?
+
+  @@unique([rutEmisor, folio, tipoId])
+}
+
+model DTEItem {
+  id          Int     @id @default(autoincrement())
+  dteId       Int
+  dte         DTE     @relation(fields: [dteId], references: [id])
+  numeroLinea Int
+  nombreItem  String
+  cantidad    Float
+  precio      Decimal
+  monto       Decimal
+
+  @@unique([dteId, numeroLinea])
+}
+
+model CAF {
+  codigo        String   @id @default(uuid())
+  rutEmisor     String
+  tipoId        Int
+  tipo          TipoDTE  @relation(fields: [tipoId], references: [id])
+  rangoInicio   Int
+  rangoTermino  Int
+} 
