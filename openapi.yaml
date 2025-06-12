@@ -1,0 +1,289 @@
+openapi: 3.0.3
+info:
+  title: API DTE Service
+  version: 1.0.0
+  description: >-
+    Servicio REST para gestión de CAF y DTE incluyendo autenticación JWT.
+servers:
+  - url: http://localhost:3000
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required: [username, password]
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+    TipoDTE:
+      type: object
+      properties:
+        id:
+          type: integer
+        descripcion:
+          type: string
+      required: [id, descripcion]
+    CAF:
+      type: object
+      properties:
+        codigo:
+          type: string
+        rutEmisor:
+          type: string
+        tipoId:
+          type: integer
+        rangoInicio:
+          type: integer
+        rangoTermino:
+          type: integer
+      required: [codigo, rutEmisor, tipoId, rangoInicio, rangoTermino]
+    DTEItem:
+      type: object
+      properties:
+        numeroLinea:
+          type: integer
+        nombreItem:
+          type: string
+        cantidad:
+          type: number
+        precio:
+          type: number
+        monto:
+          type: number
+      required: [numeroLinea, nombreItem, cantidad, precio, monto]
+    DTE:
+      type: object
+      properties:
+        id:
+          type: integer
+        rutEmisor:
+          type: string
+        folio:
+          type: integer
+        tipoId:
+          type: integer
+        razonSocialEmisor:
+          type: string
+        rutReceptor:
+          type: string
+        razonSocialReceptor:
+          type: string
+        montoNeto:
+          type: number
+        iva:
+          type: number
+        total:
+          type: number
+        estado:
+          type: string
+          enum: [EN_REVISION, CORRECTO, ERROR]
+        glosa:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DTEItem'
+      required:
+        - rutEmisor
+        - folio
+        - tipoId
+        - razonSocialEmisor
+        - rutReceptor
+        - razonSocialReceptor
+        - montoNeto
+        - iva
+        - total
+        - estado
+        - items
+paths:
+  /login:
+    post:
+      summary: Autenticación dummy de usuario (usar admin / admin)
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        "200":
+          description: Token JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        "401":
+          description: Credenciales inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /tipo-dte:
+    get:
+      summary: Listado de tipos DTE
+      tags: [TipoDTE]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de tipos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TipoDTE'
+        "401":
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /empresa/{rut}/caf:
+    parameters:
+      - in: path
+        name: rut
+        required: true
+        schema:
+          type: string
+        description: RUT del emisor
+    get:
+      summary: Listar CAF de una empresa
+      tags: [CAF]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de CAF
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CAF'
+        "401":
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Crear nuevo CAF
+      tags: [CAF]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tipoId:
+                  type: integer
+                rangoInicio:
+                  type: integer
+                rangoTermino:
+                  type: integer
+              required: [tipoId, rangoInicio, rangoTermino]
+      responses:
+        "201":
+          description: CAF creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CAF'
+        "400": { description: Datos inválidos, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        "406": { description: Tipo DTE inexistente, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        "409": { description: Rango CAF se solapa, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /empresa/{rut}/dte:
+    parameters:
+      - in: path
+        name: rut
+        required: true
+        schema:
+          type: string
+        description: RUT del emisor
+    get:
+      summary: Obtener DTE por triada
+      tags: [DTE]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: folio
+          schema:
+            type: integer
+          required: true
+        - in: query
+          name: tipoDte
+          schema:
+            type: integer
+          required: true
+      responses:
+        "200":
+          description: DTE encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DTE'
+        "404": { description: No encontrado, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        "401": { description: No autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    post:
+      summary: Crear nuevo DTE
+      tags: [DTE]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                codigoCaf: { type: string }
+                folio: { type: integer }
+                tipoId: { type: integer }
+                razonSocialEmisor: { type: string }
+                rutReceptor: { type: string }
+                razonSocialReceptor: { type: string }
+                montoNeto: { type: number }
+                iva: { type: number }
+                total: { type: number }
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/DTEItem'
+              required: [codigoCaf, folio, tipoId, razonSocialEmisor, rutReceptor, razonSocialReceptor, montoNeto, iva, total, items]
+      responses:
+        "201":
+          description: DTE creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DTE'
+        "400": { description: Datos inválidos, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        "406": { description: Tipo DTE o CAF inválido, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        "409": { description: DTE duplicado, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+security:
+  - bearerAuth: [] 
