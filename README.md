@@ -36,6 +36,7 @@ $ npm install
 | Comando | Descripción |
 |---------|-------------|
 | `npm run dev` | Arranca el servidor en modo desarrollo usando **ts-node**. |
+| `npm run dev2` | Arranca el servidor en modo desarrollo usando **ts-node-dev** que permite captar las modificaciones a los archivos sin necesidad de reiniciarlo manualmente. |
 | `npm run build` | Compila TypeScript a JavaScript en `dist/`. |
 | `npm start` | Ejecuta la versión compilada (`node dist/index.js`). |
 | `npm run prisma:generate` | Genera el cliente de Prisma a partir del archivo `prisma/schema.prisma`. |
@@ -71,53 +72,6 @@ npm run seed
 
 Esto ejecuta `prisma/seed.ts` y hace _upsert_ de los cuatro **TipoDTE** por defecto (33, 34, 56, 61).
 
-### 4. Explorar la base de datos (opcional)
-
-```bash
-npx prisma studio
-```
-
-Abre Prisma Studio en tu navegador para explorar y editar visualmente los registros.
-
----
-
-## Ejemplo de uso de Prisma en el código
-
-```ts
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-// Obtener todos los tipos DTE
-const tipos = await prisma.tipoDTE.findMany();
-
-// Crear un nuevo DTE
-await prisma.dTE.create({
-  data: {
-    rutEmisor: '12345678-9',
-    folio: 1,
-    tipoId: 33,
-    razonSocialEmisor: 'Emisor S.A.',
-    rutReceptor: '98765432-1',
-    razonSocialReceptor: 'Receptor Ltda.',
-    montoNeto: 10000,
-    iva: 1900,
-    total: 11900,
-    items: {
-      create: [
-        {
-          numeroLinea: 1,
-          nombreItem: 'Producto A',
-          cantidad: 2,
-          precio: 5000,
-          monto: 10000,
-        },
-      ],
-    },
-  },
-});
-```
-
 ---
 
 ## Flujo típico de desarrollo
@@ -125,6 +79,20 @@ await prisma.dTE.create({
 1. **Instalar dependencias**: `npm install`
 2. **Generar cliente & migrar**: `npm run prisma:generate && npm run migrate`
 3. **Seed opcional**: `npm run seed`
-4. **Arrancar el servidor**: `npm run dev`
+4. **Arrancar el servidor**: `npm run dev` o `npm run dev2` (para que se refresque el server inmediatamente con los cambios en el código)
 
 ¡Listo! Ya puedes empezar a agregar más endpoints y lógica de negocio. 
+
+## ¿Cómo lo pruebo?
+
+Dos alternativas:
+
+* Revisar proactivamente la documentación disponible en el archivo `openapi.yaml`.
+* Utilizar como referencia los requests de ejemplo que se encuentran en la carpeta `tests-requests`.
+
+## ¿Qué falta?
+
+* **Tests**: generar los tests para cada uno de los métodos que son parte de los controladores
+* **Colas**: este es un proyecto simple, no pensado para escalar y sostener posibles inconsistencias en la información, por ejemplo si se realizan 2 o más peticiones concurrentes de creación de CAFs, las validaciones podrían no tener efecto, y se podrían crear CAFs inconsistentes a las reglas de negocio
+* **Firma y certificados**: por tiempo no se consideró el incorporar la firma como parte del DTE, que en el caso del SII es una parte fundamental que garantiza la confiabilidad y el no repudio de su emisión.
+* **Documentación API**: debería estar amarrada al desarrollo (mediante notaciones) y así obligar a que se mantenga actualizada.
